@@ -3,3 +3,4 @@ pub mod qr;
 pub mod opcode;
 pub mod aa;
 pub mod tc;
+pub mod rd;
