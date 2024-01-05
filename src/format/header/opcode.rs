@@ -16,7 +16,8 @@ impl Opcode {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
 pub enum FromError {
     Unassigned(u8),
     InvalidRange(u8),
