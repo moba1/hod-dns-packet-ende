@@ -1,5 +1,5 @@
 use std::io::Cursor;
-use byteorder::{BigEndian, ReadBytesExt};
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
 pub mod one_bit_flag;
 pub mod id;
@@ -66,6 +66,21 @@ impl std::fmt::Display for HeaderReadError {
 }
 
 impl std::error::Error for HeaderReadError {}
+
+#[derive(Debug)]
+pub struct HeaderWriteError {
+    cause: String,
+    property_name: String,
+}
+
+impl std::fmt::Display for HeaderWriteError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "cannot write header property: {}", self.property_name)?;
+        write!(f, "{}", self.cause)
+    }
+}
+
+impl std::error::Error for HeaderWriteError {}
 
 impl Header {
     pub fn decode(header_buffer: &[u8]) -> Result<Header, Box<dyn std::error::Error>> {
@@ -161,6 +176,44 @@ impl Header {
             ns_up_count
         })
     }
+
+    pub fn encode(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let mut buffer = vec![];
+
+        buffer.write_u16::<BigEndian>(self.id.into())
+            .map_err(|e| HeaderWriteError { cause: e.to_string(), property_name: "ID".to_string() })?;
+        let qr: u8     = self.qr.into();
+        let opcode: u8 = self.opcode.into();
+        let aa: u8     = self.aa.into();
+        let tc: u8     = self.tc.into();
+        let rd: u8     = self.rd.into();
+        let ra: u8     = self.rd.into();
+        let ad: u8     = self.ad.into();
+        let cd: u8     = self.cd.into();
+        let rcode: u16 = self.rcode.into();
+        let chunk: u16 =
+              ((qr as u16)     << 15)
+            | ((opcode as u16) << 11)
+            | ((aa as u16)     << 10)
+            | ((tc as u16)     <<  9)
+            | ((rd as u16)     <<  8)
+            | ((ra as u16)     <<  7)
+            | ((ad as u16)     <<  5)
+            | ((cd as u16)     <<  4)
+            | rcode;
+        buffer.write_u16::<BigEndian>(chunk)
+            .map_err(|e| HeaderWriteError { cause: e.to_string(), property_name: format!("{} ~ {} bit", 17, 32) })?;
+        buffer.write_u16::<BigEndian>(self.qd_zo_count.into())
+            .map_err(|e| HeaderWriteError { cause: e.to_string(), property_name: "QDCOUNT / ZOCOUNT".to_string() })?;
+        buffer.write_u16::<BigEndian>(self.an_pr_count.into())
+            .map_err(|e| HeaderWriteError { cause: e.to_string(), property_name: "ANCOUNT / PRCOUNT".to_string() })?;
+        buffer.write_u16::<BigEndian>(self.ns_up_count.into())
+            .map_err(|e| HeaderWriteError { cause: e.to_string(), property_name: "NSCOUNT / UPCOUNT".to_string() })?;
+        buffer.write_u16::<BigEndian>(self.arcount.into())
+            .map_err(|e| HeaderWriteError { cause: e.to_string(), property_name: "ARCOUNT".to_string() })?;
+
+        Ok(buffer)
+    }
 }
 
 #[cfg(test)]
@@ -243,23 +296,88 @@ mod tests {
     fn it_reports_error_when_found_invalid_value() {
         let buffer: &[u8] = &[
             0xAB, 0xCD, // ID = 0xABCD
-            0b1_1111_1_1_0, 0b1_0_1_0_0000,
+            0b1_0111_1_1_0, 0b1_0_1_0_0000,
             //^ ^    ^ ^ ^       ^ ^ ^ ^ ^
             //| |    | | |       | | | | `- RCODE  = No error
             //| |    | | |       | | | `--- CD     = DNSSEC enabled
             //| |    | | |       | | `----- AD     = Success DNSSEC validation / Supported AD bit
             //| |    | | |       | `------- Z      = reserved (only 0)
-            //| |    | | |        `-------- RA     = Supported recuesive query
+            //| |    | | |       `--------- RA     = Supported recuesive query
             //| |    | | `----------------- RD     = Server recursion undesired
             //| |    | `------------------- TC     = Truncated DNS packet
             //| |    `--------------------- AA     = from Authoritative Server
-            //| `-------------------------- OPCODE = unassigned value (!!!INVALID VALUE!!! `15` is not assigned in RFC)
+            //| `-------------------------- OPCODE = unassigned value (!!!INVALID VALUE!!! `7` is not assigned in RFC)
             //`---------------------------- QR     = Response
             0x00, 0x01, // QDCOUNT / ZOCOUNT = 0x0001
             0x01, 0x02, // ANCOUNT / PRCOUNT = 0x0102
             0x03, 0x04, // NSCOUNT / UPCOUNT = 0x0304
             0x05, 0x06, // ARCOUNT           = 0x0506
         ];
-        assert!(Header::decode(buffer).is_err(), "should not decode invalid DNS packet");
+        assert!(Header::decode(buffer).is_err(), "should not decode invalid DNS packet (OPCODE)");
+
+        let buffer: &[u8] = &[
+            0xAB, 0xCD, // ID = 0xABCD
+            0b1_0100_1_1_0, 0b1_0_1_0_1100,
+            //^ ^    ^ ^ ^    ^ ^ ^ ^ ^
+            //| |    | | |    | | | | `---- RCODE  = unassigned value (!!!INVALID VALUE!!! `12` is not assigned in RFC)
+            //| |    | | |    | | | `------ CD     = DNSSEC enabled
+            //| |    | | |    | | `-------- AD     = Success DNSSEC validation / Supported AD bit
+            //| |    | | |    | `---------- Z      = reserved (only 0)
+            //| |    | | |    `------------ RA     = Supported recuesive query
+            //| |    | | `----------------- RD     = Server recursion undesired
+            //| |    | `------------------- TC     = Truncated DNS packet
+            //| |    `--------------------- AA     = from Authoritative Server
+            //| `-------------------------- OPCODE = Notify
+            //`---------------------------- QR     = Response
+            0x00, 0x01, // QDCOUNT / ZOCOUNT = 0x0001
+            0x01, 0x02, // ANCOUNT / PRCOUNT = 0x0102
+            0x03, 0x04, // NSCOUNT / UPCOUNT = 0x0304
+            0x05, 0x06, // ARCOUNT           = 0x0506
+        ];
+        assert!(Header::decode(buffer).is_err(), "should not decode invalid DNS packet (RCODE)");
+    }
+
+    #[test]
+    fn it_encodes_to_u8_array() {
+        let header = Header {
+            id:          id::Id(0xABCD),
+            qr:          one_bit_flag::Qr::Query,
+            opcode:      opcode::Opcode::Query,
+            aa:          one_bit_flag::Aa::FromAuthority,
+            tc:          one_bit_flag::Tc::NotTruncated,
+            rd:          one_bit_flag::Rd::RecursiveUndesired,
+            ra:          one_bit_flag::Ra::RecursionUnavailable,
+            z:           z::Z,
+            ad:          one_bit_flag::Ad::SuccessDnssecValidationOrSupportedAdBit,
+            cd:          one_bit_flag::Cd::DnssecForbidden,
+            rcode:       rcode::Rcode::NoError,
+            qd_zo_count: count::QdZoCount(0x0102),
+            an_pr_count: count::AnPrCount(0x0304),
+            ns_up_count: count::NsUpCount(0x0405),
+            arcount:     count::Arcount(0x0607),
+        };
+        let expected_buffer: Vec<u8> = vec![
+            0xAB, 0xCD, // ID
+            0b0_0000_1_0_0, 0b0_0_1_1_0000,
+            //^ ^    ^ ^ ^    ^ ^ ^ ^ ^
+            //| |    | | |    | | | | `---- RCODE
+            //| |    | | |    | | | `------ CD
+            //| |    | | |    | | `-------- AD
+            //| |    | | |    | `---------- Z
+            //| |    | | |    `------------ RA
+            //| |    | | `----------------- RD
+            //| |    | `------------------- TC
+            //| |    `--------------------- AA
+            //| `-------------------------- OPCODE
+            //`---------------------------- QR
+            0x01, 0x02, // QDCOUNT / ZOCOUNT
+            0x03, 0x04, // ANCOUNT / PRCOUNT
+            0x04, 0x05, // NSCOUNT / UPCOUNT
+            0x06, 0x07, // ARCOUNT
+        ];
+        let encoded_buffer = header.encode();
+        assert!(encoded_buffer.is_ok());
+        let encoded_buffer = encoded_buffer.unwrap();
+        assert_eq!(encoded_buffer, expected_buffer);
     }
 }
