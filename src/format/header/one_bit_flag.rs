@@ -153,13 +153,13 @@ mod tc_flag_tests {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rd {
-    RecursiveQuery,
-    NonRecursiveQuery
+    RecursiveDesired,
+    RecursiveUndesired,
 }
 implement_u8_encoder_and_decoder!(
     Rd,
-    Self::NonRecursiveQuery,
-    Self::RecursiveQuery,
+    Self::RecursiveUndesired,
+    Self::RecursiveDesired,
 );
 #[cfg(test)]
 mod rd_flag_tests {
@@ -168,7 +168,7 @@ mod rd_flag_tests {
 
     #[test]
     fn it_converts_to_raw_value() {
-        let value: u8 = Rd::NonRecursiveQuery.into();
+        let value: u8 = Rd::RecursiveUndesired.into();
         assert_eq!(value, 0);
     }
 }
