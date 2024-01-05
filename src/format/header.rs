@@ -10,7 +10,7 @@ pub mod count;
 
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-struct Header {
+pub struct Header {
     pub id:          id::Id,
     pub qr:          one_bit_flag::Qr,
     pub opcode:      opcode::Opcode,
@@ -29,7 +29,7 @@ struct Header {
 }
 
 #[derive(Debug)]
-struct InvalidValueError<InvalidValue>
+pub struct InvalidValueError<InvalidValue>
     where InvalidValue: std::fmt::Display
 {
     name: String,
@@ -53,7 +53,7 @@ impl<InvalidValue> std::error::Error for InvalidValueError<InvalidValue>
     where InvalidValue: std::fmt::Debug + std::fmt::Display {}
 
 #[derive(Debug)]
-struct HeaderReadError {
+pub struct HeaderReadError {
     cause: String,
     range: (u8, u8),
 }
