@@ -3,3 +3,4 @@ pub mod id;
 pub mod opcode;
 pub mod z;
 pub mod rcode;
+pub mod count;
