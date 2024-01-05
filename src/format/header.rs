@@ -231,7 +231,7 @@ mod tests {
             //| |    | | |       | | | `--- CD     = DNSSEC enabled
             //| |    | | |       | | `----- AD     = Success DNSSEC validation / Supported AD bit
             //| |    | | |       | `------- Z      = reserved (only 0)
-            //| |    | | |        `-------- RA     = Supported recuesive query
+            //| |    | | |       `--------- RA     = Supported recuesive query
             //| |    | | `----------------- RD     = Server recursion undesired
             //| |    | `------------------- TC     = Truncated DNS packet
             //| |    `--------------------- AA     = from Authoritative Server
@@ -271,14 +271,14 @@ mod tests {
         assert!(Header::decode(buffer).is_err(), "should not decode empty slice");
 
         let buffer: &[u8] = &[
-            0xAB_u8, 0xCD_u8, // ID = 0xABCD
-            0b1_0000_1_1_0_u8, 0b1_0_1_0_0000_u8,
-            //^ ^    ^ ^ ^       ^ ^ ^ ^ ^
-            //| |    | | |       | | | | `- RCODE  = No error
-            //| |    | | |       | | | `--- CD     = DNSSEC enabled
-            //| |    | | |       | | `----- AD     = Success DNSSEC validation / Supported AD bit
-            //| |    | | |       | `------- Z      = reserved (only 0)
-            //| |    | | |        `-------- RA     = Supported recuesive query
+            0xAB, 0xCD, // ID = 0xABCD
+            0b1_0000_1_1_0, 0b1_0_1_0_0000,
+            //^ ^    ^ ^ ^    ^ ^ ^ ^ ^
+            //| |    | | |    | | | | `---- RCODE  = No error
+            //| |    | | |    | | | `------ CD     = DNSSEC enabled
+            //| |    | | |    | | `-------- AD     = Success DNSSEC validation / Supported AD bit
+            //| |    | | |    | `---------- Z      = reserved (only 0)
+            //| |    | | |    `------------ RA     = Supported recuesive query
             //| |    | | `----------------- RD     = Server recursion undesired
             //| |    | `------------------- TC     = Truncated DNS packet
             //| |    `--------------------- AA     = from Authoritative Server
