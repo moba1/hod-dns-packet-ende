@@ -82,9 +82,11 @@ impl std::fmt::Display for HeaderWriteError {
 
 impl std::error::Error for HeaderWriteError {}
 
-impl Header {
-    pub fn decode(header_buffer: &[u8]) -> Result<Header, Box<dyn std::error::Error>> {
-        let mut buffer = Cursor::new(header_buffer);
+impl std::convert::TryFrom<&[u8]> for Header {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        let mut buffer = Cursor::new(value);
         let id = buffer.read_u16::<BigEndian>()
             .map_err(|e| HeaderReadError { cause: e.to_string(), range: (1, 16) })?;
         let chunk = buffer.read_u16::<BigEndian>()
@@ -176,8 +178,12 @@ impl Header {
             ns_up_count
         })
     }
+}
 
-    pub fn encode(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+impl std::convert::TryInto<Vec<u8>> for Header {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_into(self) -> Result<Vec<u8>, Self::Error> {
         let mut buffer = vec![];
 
         buffer.write_u16::<BigEndian>(self.id.into())
@@ -242,7 +248,7 @@ mod tests {
             0x03, 0x04, // NSCOUNT / UPCOUNT = 0x0304
             0x05, 0x06, // ARCOUNT           = 0x0506
         ];
-        let decoded_header = Header::decode(header);
+        let decoded_header = Header::try_from(header);
         assert!(decoded_header.is_ok());
         let decoded_header = decoded_header.unwrap();
         let expected_header = Header {
@@ -268,7 +274,7 @@ mod tests {
     #[test]
     fn it_reports_error_when_header_lack() {
         let buffer: &[u8] = &[];
-        assert!(Header::decode(buffer).is_err(), "should not decode empty slice");
+        assert!(Header::try_from(buffer).is_err(), "should not decode empty slice");
 
         let buffer: &[u8] = &[
             0xAB, 0xCD, // ID = 0xABCD
@@ -289,7 +295,7 @@ mod tests {
             0x03, 0x04, // NSCOUNT / UPCOUNT = 0x0304
             0x05,       // ARCOUNT (!!!LACK!!! length == 16bit == 2byte)
         ];
-        assert!(Header::decode(buffer).is_err(), "should not decode lack slidce");
+        assert!(Header::try_from(buffer).is_err(), "should not decode lack slidce");
     }
 
     #[test]
@@ -313,7 +319,7 @@ mod tests {
             0x03, 0x04, // NSCOUNT / UPCOUNT = 0x0304
             0x05, 0x06, // ARCOUNT           = 0x0506
         ];
-        assert!(Header::decode(buffer).is_err(), "should not decode invalid DNS packet (OPCODE)");
+        assert!(Header::try_from(buffer).is_err(), "should not decode invalid DNS packet (OPCODE)");
 
         let buffer: &[u8] = &[
             0xAB, 0xCD, // ID = 0xABCD
@@ -334,7 +340,7 @@ mod tests {
             0x03, 0x04, // NSCOUNT / UPCOUNT = 0x0304
             0x05, 0x06, // ARCOUNT           = 0x0506
         ];
-        assert!(Header::decode(buffer).is_err(), "should not decode invalid DNS packet (RCODE)");
+        assert!(Header::try_from(buffer).is_err(), "should not decode invalid DNS packet (RCODE)");
     }
 
     #[test]
@@ -375,9 +381,9 @@ mod tests {
             0x04, 0x05, // NSCOUNT / UPCOUNT
             0x06, 0x07, // ARCOUNT
         ];
-        let encoded_buffer = header.encode();
+        let encoded_buffer = header.try_into();
         assert!(encoded_buffer.is_ok());
-        let encoded_buffer = encoded_buffer.unwrap();
+        let encoded_buffer: Vec<u8> = encoded_buffer.unwrap();
         assert_eq!(encoded_buffer, expected_buffer);
     }
 }
