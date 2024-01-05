@@ -225,11 +225,11 @@ mod ra_flag_tests {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Ad {
     SuccessDnssecValidationOrSupportedAdBit,
-    DnssecValidationFailureOrNotSUpportedAdBit
+    DnssecValidationFailureOrNotSupportedAdBit
 }
 implement_u8_encoder_and_decoder!(
     Ad,
-    Self::DnssecValidationFailureOrNotSUpportedAdBit,
+    Self::DnssecValidationFailureOrNotSupportedAdBit,
     Self::SuccessDnssecValidationOrSupportedAdBit,
 );
 #[cfg(test)]
@@ -239,7 +239,7 @@ mod ad_flag_tests {
 
     #[test]
     fn it_converts_to_raw_bit_value() {
-        let value: u8 = Ad::DnssecValidationFailureOrNotSUpportedAdBit.into();
+        let value: u8 = Ad::DnssecValidationFailureOrNotSupportedAdBit.into();
         assert_eq!(value, 0);
     }
 }
