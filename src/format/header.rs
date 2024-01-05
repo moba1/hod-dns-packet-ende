@@ -1,11 +1,5 @@
+pub mod one_bit_flag;
 pub mod id;
-pub mod qr;
 pub mod opcode;
-pub mod aa;
-pub mod tc;
-pub mod rd;
-pub mod ra;
 pub mod z;
-pub mod ad;
-pub mod cd;
 pub mod rcode;
