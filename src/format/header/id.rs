@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Id(u16);
+pub struct Id(pub u16);
 
 impl Id {
     pub fn to_hex_string(&self) -> String {

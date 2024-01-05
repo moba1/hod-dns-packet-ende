@@ -36,17 +36,17 @@ mod implement_u16_encoder_and_decoder_tests {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct QdZoCount(u16);
+pub struct QdZoCount(pub u16);
 implement_u16_encoder_and_decoder!(QdZoCount);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct AnPrCount(u16);
+pub struct AnPrCount(pub u16);
 implement_u16_encoder_and_decoder!(AnPrCount);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct NsUpCount(u16);
+pub struct NsUpCount(pub u16);
 implement_u16_encoder_and_decoder!(NsUpCount);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Arcount(u16);
+pub struct Arcount(pub u16);
 implement_u16_encoder_and_decoder!(Arcount);
